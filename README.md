@@ -1,14 +1,14 @@
 # Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS
 
-**Entendiendo RAG construyéndolo tres veces y quitando una capa de abstracción en cada versión.**
+Exploración de RAG en tres fases para entender qué resuelve **Amazon Bedrock Knowledge Bases** y qué implica construir sus componentes por cuenta propia.
 
-Proyecto de la charla presentada en **CodeOn 2026**, organizada por Developer Student Clubs UTP.
+![Banner de CodeOn 2026](docs/images/banner-codeon2026.png)
 
-Construí el mismo asistente RAG de tres formas para entender qué resuelve **Amazon Bedrock Knowledge Bases** por ti y qué implica construir esas piezas por cuenta propia.
+Proyecto presentado en la charla **«Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS»**, en **CodeOn 2026**, organizado por Developer Student Clubs UTP.
 
 > **Idea central:** Bedrock no es magia: ofrece componentes de RAG gestionados que evitan implementar y mantener ciertas piezas por separado. Entender qué hay detrás permite decidir cuándo conviene utilizarlos y cuándo tiene sentido construir una solución propia.
 
-![Banner de la charla CodeOn 2026](docs/images/banner-codeon2026.png)
+## Explora las tres fases
 
 ## Explora las tres fases
 
