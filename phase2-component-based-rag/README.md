@@ -152,20 +152,6 @@ Como esa información no estaba disponible en las fichas técnicas, la respuesta
 
 Debajo de la respuesta, el panel `See search results` muestra los fragmentos recuperados que se proporcionan al modelo.
 
-Añadí esta visualización para inspeccionar el contexto de entrada y entender mejor por qué el modelo responde de una determinada manera.
-
-## 7. Lección aprendida: una mala recuperación limita la respuesta
-
-Mi primera ejecución utilizaba `n_results=4`. La búsqueda recuperaba los inicios de las fichas, donde aparecía el nombre de cada modelo, pero no la sección de seguridad de Alpha.
-
-Como consecuencia, el modelo respondió que no tenía la información disponible. En esa prueba no inventó una respuesta, pero tampoco pudo responder la pregunta porque los fragmentos recuperados no contenían los datos necesarios.
-
-Para mejorar el resultado apliqué dos cambios al mismo tiempo:
-
-1. Añadí el nombre del modelo como prefijo de cada fragmento antes de generar los embeddings.
-2. Aumenté `n_results` de 4 a 8.
-
-Después de los cambios, la respuesta fue correcta. Sin embargo, **no probé cada cambio por separado**, por lo que no puedo determinar cuál tuvo mayor impacto.
 
 ### ¿Qué implica utilizar `n_results=8`?
 
