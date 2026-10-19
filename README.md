@@ -111,7 +111,6 @@ Elige los comandos correspondientes a tu sistema:
 
 | Sistema | Crear entorno | Activar entorno |
 |---|---|---|
-| macOS / Linux | `python3 -m venv .venv` | `source .venv/bin/activate` |
 | Windows, Git Bash | `python -m venv .venv` | `source .venv/Scripts/activate` |
 | Windows, PowerShell | `python -m venv .venv` | `.venv\Scripts\Activate.ps1` |
 
@@ -188,7 +187,6 @@ La estructura muestra los archivos principales del proyecto. Puede haber archivo
 
 ## Próximos pasos
 
-- Crear un conjunto de preguntas con respuestas esperadas para evaluar la calidad de la recuperación.
 - Ejecutar la implementación de la Fase 3 con LangChain y Amazon Bedrock para aislar mejor el efecto del proveedor.
 - Evaluar más documentos y preguntas antes de establecer criterios de relevancia para los fragmentos recuperados.
 - Medir costos y latencia con un procedimiento reproducible.
