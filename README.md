@@ -1,150 +1,202 @@
-# 🚗 AutoSpec Voice Assistant - Asistente de Voz RAG para Consultas Automotrices
+# Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS
 
-Asistente de Voz Conversacional (IVR Inteligente) que responde consultas técnicas sobre vehículos en tiempo real, a partir de fichas técnicas y manuales cargados en la nube. El proyecto usa una arquitectura **RAG (Retrieval-Augmented Generation)**, construida en fases progresivas para maximizar aprendizaje técnico, resiliencia de infraestructura y preparación para el examen **AWS Certified AI Practitioner**.
+**Entendiendo RAG construyéndolo tres veces y quitando una capa de abstracción en cada versión.**
 
-| Respuesta exitosa de la Lambda                                               | Knowledge Base disponible                                            |
-| ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| ![Respuesta Lambda 200 OK](./docs/screenshots/phase1/lambda_response_200.png) | ![Knowledge Base overview](./docs/screenshots/phase1/kb_overview.png) |
+Proyecto de la charla presentada en **CodeOn 2026**, organizada por Developer Student Clubs UTP.
 
----
+Construí el mismo asistente RAG de tres formas para entender qué resuelve **Amazon Bedrock Knowledge Bases** por ti y qué implica construir esas piezas por cuenta propia.
 
-## Motivación
+> **Idea central:** Bedrock no es magia: ofrece componentes de RAG gestionados que evitan implementar y mantener ciertas piezas por separado. Entender qué hay detrás permite decidir cuándo conviene utilizarlos y cuándo tiene sentido construir una solución propia.
 
-Este proyecto nace de la curiosidad de entender qué ocurre **dentro** de un pipeline RAG, en vez de usarlo como una caja negra. Por eso está diseñado como una evolución deliberada:
+![Banner de la charla CodeOn 2026](docs/images/banner-codeon2026.png)
 
-1. **Aislar la recuperación pura** (Fase 1), usando Bedrock Knowledge Bases gestionado, para validar que los cimientos (ingesta, chunking, embeddings, búsqueda vectorial) funcionan correctamente antes de sumar generación de texto.
-2. **Construir el ciclo RAG por componentes** (Fase 2), con Titan Embeddings, ChromaDB y Amazon Nova Lite orquestados directamente en código, para ver y controlar cada paso del proceso, en vez de depender de la abstracción automática de una Knowledge Base gestionada.
-3. **Reconstruir esa misma orquestación con un framework profesional** (Fase 3), usando LangChain, ChromaDB y Google Gemini, para demostrar que la arquitectura es portátil entre proveedores (no depende de AWS) y que un framework estándar simplifica el intercambio de proveedor a solo cambiar la inicialización de los modelos, sin reescribir el resto del código.
+## Explora las tres fases
 
-El dominio automotriz se eligió por ser un caso de uso realista y frecuente para asistentes de voz conversacionales (IVR) en industria.
+| Fase | Qué encontrarás | README |
+|---|---|---|
+| **1. RAG gestionado** | Amazon Bedrock Knowledge Bases, S3 y Lambda. Exploración de la recuperación de información sin implementar manualmente el chunking, los embeddings ni la base vectorial. | [Ver la Fase 1](phase1-direct-retrieval/README.md) |
+| **2. RAG por componentes en AWS** | Titan Text Embeddings V2, ChromaDB y Amazon Nova Lite. Construcción del flujo de recuperación y generación mediante código propio. | [Ver la Fase 2](phase2-component-based-rag/README.md) |
+| **3. RAG fuera de AWS** | LangChain, ChromaDB y Google Gemini. Implementación local del mismo patrón con otras herramientas. | [Ver la Fase 3](phase3-code-first-rag/README.md) |
 
----
+## El caso de uso
 
-## Mapa de Progreso
+El proyecto utiliza un asistente que responde preguntas sobre las fichas técnicas ficticias de tres vehículos: **Alpha, Beta y Gamma**.
 
-| Fase                            | Estado           | Stack                                      | Enfoque Principal                                                   |
-| ------------------------------- | ---------------- | ------------------------------------------ | ------------------------------------------------------------------- |
-| **Fase 1 - Direct Retrieval**  | ✅ Completada    | Bedrock Knowledge Base + S3                | Búsqueda vectorial pura sin LLM para aislar fallos.                 |
-| **Fase 2 - Component-Based RAG** | ✅ Completada    | Titan Embeddings V2 + ChromaDB + Nova Lite | Construcción manual del pipeline RAG y guardrails anti-alucinación. |
-| **Fase 3 - RAG Code-First**     | ✅ Completada    | LangChain + ChromaDB + Gemini + SQLite     | Chunking explícito, portabilidad multi-cloud y persistencia.        |
-| **Fase 4 - Canal de Voz**       | 🔭 Visión futura | Amazon Connect + Lex                       | Conexión del backend validado a telefonía real (IVR).               |
+Se probaron dos tipos de preguntas:
 
----
+- **Pregunta con respuesta disponible:** ¿Cuáles son las especificaciones de seguridad del modelo Alpha?
+- **Pregunta trampa:** ¿Cuál es la garantía extendida del modelo Alpha? Esa información no aparece en las fichas técnicas.
 
-## Arquitectura
+La segunda pregunta permite observar cómo se comporta el sistema cuando la información solicitada no está disponible en los documentos.
 
-### Flujo actual validado: pipeline RAG completo (Fases 1-3)
+## ¿Qué hay detrás de un RAG?
 
-```mermaid
-flowchart LR
-    U[Usuario en interfaz] --> Q[Pregunta]
-    Q --> R["Retrieve<br/>(Bedrock KB / ChromaDB)"]
-    R --> A["Augment<br/>(prompt con guardrails anti-alucinación)"]
-    A --> G["Generate"]
-    G --> RESP[Respuesta]
-    RESP --> L[(Log, cuando aplica)]
-    RESP --> U
+RAG significa *Retrieval-Augmented Generation*, o generación aumentada por recuperación. Combina la búsqueda de información relevante con un modelo que utiliza esa información para elaborar una respuesta.
+
+| Componente | Qué hace |
+|---|---|
+| **Chunking** | Divide los documentos en fragmentos que se pueden recuperar por separado. |
+| **Embeddings** | Representa cada fragmento mediante un vector numérico que permite buscar contenido semánticamente parecido. |
+| **Base vectorial** | Almacena los vectores y permite recuperar fragmentos cercanos a una consulta. |
+| **Generación** | Un modelo redacta una respuesta utilizando los fragmentos recuperados como contexto. |
+
+![Diagrama del flujo de ingesta y consulta de un RAG](docs/images/rag-diagrama.png)
+
+La **R** de RAG corresponde a *Retrieval* (recuperación); la **G**, a *Generation* (generación). En la fase de recuperación se buscan fragmentos relevantes. En la generación, el modelo utiliza el contexto recuperado para elaborar una respuesta.
+
+La diferencia entre las tres implementaciones está en quién se encarga de estas piezas y cuánto control tiene el desarrollador sobre ellas.
+
+## Las tres fases: el mismo patrón con diferentes niveles de abstracción
+
+| Característica | Fase 1: Bedrock gestionado | Fase 2: componentes propios en AWS | Fase 3: fuera de AWS |
+|---|---|---|---|
+| **Enfoque** | Servicio gestionado; se probó la recuperación | Componentes conectados mediante código propio | Componentes conectados con LangChain |
+| **Entorno** | Cuenta de AWS | Entorno temporal de laboratorio de AWS | Máquina local |
+| **División de documentos** | Bedrock: configuración observada de 300 tokens y 20 % de traslape | Función propia: 500 caracteres y 100 de traslape | `RecursiveCharacterTextSplitter`: 500 caracteres y 100 de traslape |
+| **Embeddings** | Gestionados por Bedrock; el modelo utilizado no quedó identificado en la consola | Titan Text Embeddings V2 | Gemini (`gemini-embedding-001`) |
+| **Base vectorial** | Gestionada por Bedrock | ChromaDB local | ChromaDB local |
+| **Generación** | No validada por un límite de cuota de la cuenta | Nova Lite mediante la API Converse | Gemini (`gemini-3.6-flash`) |
+| **Orquestación** | Knowledge Bases y una Lambda que consulta mediante `Retrieve` | Código propio con `boto3` | Cadena de LangChain |
+
+### ¿Qué cambia al pasar de una fase a otra?
+
+**Fase 1 — Bedrock se encarga de la infraestructura de recuperación.**
+
+La Knowledge Base gestiona el proceso de ingesta y la infraestructura de búsqueda vectorial. La Lambda consulta la información recuperada mediante la API `Retrieve`. En esta fase no se validó la generación de respuestas con la Knowledge Base.
+
+**Fase 2 — las piezas quedan más visibles.**
+
+El código controla la división de documentos, genera embeddings con Titan, almacena los vectores en ChromaDB y utiliza Nova Lite para generar las respuestas. Esto permite inspeccionar más directamente cómo se conectan los componentes.
+
+**Fase 3 — el mismo patrón con otras herramientas.**
+
+LangChain organiza el flujo, ChromaDB almacena los vectores y Gemini genera los embeddings y las respuestas. La aplicación se ejecuta localmente.
+
+> Estas fases ilustran diferentes formas de construir un RAG; no son una comparación controlada de rendimiento. En la Fase 3 cambiaron tanto el proveedor de modelos como el framework de orquestación.
+
+## Hallazgos y limitaciones
+
+- **No medí costos, latencia ni calidad de respuestas** mediante una evaluación sistemática. El proyecto no permite concluir qué implementación es más rápida, barata o precisa.
+- La comparación no está controlada: en la Fase 3 cambiaron al mismo tiempo el proveedor de modelos y el framework.
+- Se utilizaron solo **tres documentos cortos**. Con una colección tan pequeña, la búsqueda puede devolver una gran parte de los fragmentos disponibles; el contexto final depende de la lógica de la aplicación.
+- En la Fase 1, la generación con Bedrock no pudo validarse debido a un error `ThrottlingException` asociado a la cuota diaria de tokens de la cuenta utilizada. Esto no demuestra una limitación general de Bedrock.
+- En la Fase 3, las distancias de recuperación de dos preguntas fueron distintas, pero no se validó un umbral de relevancia con un conjunto amplio de ejemplos.
+
+Los resultados y las limitaciones específicos de cada implementación están documentados en sus respectivos README.
+
+## ¿Qué necesitas para reproducir el proyecto?
+
+| Fase | Requisitos principales | Consideraciones |
+|---|---|---|
+| **3. Fuera de AWS** | Python 3.10 o superior — probado con Python 3.13 — y una clave de API de Gemini | Ejecución local. Verifica las cuotas y condiciones vigentes de Gemini. |
+| **2. Componentes propios en AWS** | Credenciales de AWS y acceso a Titan Text Embeddings V2 y Nova Lite en `us-east-1` | Los modelos y recursos utilizados pueden generar costos. Consulta los precios vigentes. |
+| **1. Bedrock gestionado** | Cuenta de AWS, bucket de S3, Knowledge Base y Lambda con permisos adecuados | Los recursos pueden generar costos. Elimínalos al terminar y revisa la facturación. |
+
+Si solo quieres explorar el flujo con una ejecución local, empieza por la **Fase 3**. Si quieres entender qué componentes gestiona Bedrock, empieza por la **Fase 1**.
+
+## Cómo clonar y empezar
+
+Para ejecutar la Fase 3, clona el repositorio:
+
+```bash
+git clone <URL_DEL_REPOSITORIO>
+cd autospec-voice-assistant-rag/phase3-code-first-rag
 ```
 
-### Flujo offline (ingesta, se ejecuta una sola vez por documento nuevo)
+Reemplaza `<URL_DEL_REPOSITORIO>` por la URL real de este repositorio.
 
-```mermaid
-flowchart TD
-    DOC["Archivos .txt"] -->|"1. Chunking"| CH["Fragmentos de texto"]
-    CH -->|"2. Embeddings"| EMB["Vectores numéricos"]
-    EMB -->|"3. Guardar"| VS[("Vector Store")]
+### 1. Crear y activar un entorno virtual
+
+Elige los comandos correspondientes a tu sistema:
+
+| Sistema | Crear entorno | Activar entorno |
+|---|---|---|
+| macOS / Linux | `python3 -m venv .venv` | `source .venv/bin/activate` |
+| Windows, Git Bash | `python -m venv .venv` | `source .venv/Scripts/activate` |
+| Windows, PowerShell | `python -m venv .venv` | `.venv\Scripts\Activate.ps1` |
+
+Con el entorno activo, normalmente verás `(.venv)` al inicio de la línea de comandos.
+
+### 2. Instalar dependencias
+
+```bash
+pip install -r requirements.txt
 ```
 
-> **Nota conceptual:** en Fase 1, esto lo hace la Knowledge Base de Bedrock de forma automática. En Fases 2 y 3, este mismo flujo se controla explícitamente en código.
+### 3. Configurar la clave de Gemini
 
-### Visión futura del producto
+Desde la carpeta `phase3-code-first-rag`, crea el archivo `.env` a partir de la plantilla:
 
-```mermaid
-flowchart LR
-    A[📞 Cliente] --> B["Amazon Connect<br/>(menú, opción N)"]
-    B -->|invoca al bot| C["Amazon Lex<br/>(ASR + NLU)"]
-    C -->|dispara| D["Backend RAG<br/>(este proyecto)"]
-    D -->|respuesta| C
-    C -->|TTS| B
-    B -->|decide siguiente paso| A
-```
+| Sistema | Comando |
+|---|---|
+| macOS / Linux / Git Bash | `cp .env.example .env` |
+| PowerShell | `Copy-Item .env.example .env` |
 
----
+Abre `.env` y reemplaza el valor de ejemplo por tu propia clave de Gemini. No compartas ni subas ese archivo al repositorio.
 
-## Stack Tecnológico
+### 4. Continuar con la ingesta y la aplicación
 
-| Componente                             | Servicio                                                   | Fase        |
-| -------------------------------------- | ---------------------------------------------------------- | ----------- |
-| Almacenamiento de documentos           | Amazon S3                                                  | Fase 1      |
-| Orquestador de conocimiento gestionado | Amazon Bedrock Knowledge Bases                             | Fase 1      |
-| Cómputo / lógica                       | AWS Lambda (Python, boto3)                                 | Fase 1      |
-| Vector store en código                 | ChromaDB                                                   | Fases 2 y 3 |
-| Embeddings                             | Amazon Titan Text Embeddings V2                            | Fase 2      |
-| Generación                             | Amazon Nova Lite (Converse API)                            | Fase 2      |
-| Framework de orquestación              | LangChain (LCEL)                                           | Fase 3      |
-| Embeddings + Generación                | Google Gemini (`gemini-embedding-001`, `gemini-3.6-flash`) | Fase 3      |
-| Registro de conversaciones             | SQLite                                                     | Fase 3      |
-| Interfaz de prueba                     | Streamlit                                                  | Fases 2 y 3 |
-| Voz (visión futura)                    | Amazon Lex + Amazon Connect                                | Fase 4      |
+Los pasos para construir la base vectorial, ejecutar la ingesta y arrancar Streamlit están en el [README de la Fase 3](phase3-code-first-rag/README.md).
 
----
+## Seguridad
 
-## Estructura del Repositorio
+- **Nunca subas claves de API ni credenciales de AWS al repositorio.**
+- La clave de Gemini se carga desde `phase3-code-first-rag/.env`, que debe estar excluido mediante `.gitignore`.
+- No muestres claves durante grabaciones, capturas o sesiones de pantalla compartida.
+- Si una clave se expone, revócala y genera otra. No reutilices una clave expuesta.
+- Antes de publicar capturas, oculta el número de cuenta de AWS (*Account ID*) y cualquier otra información sensible.
+- Comprueba que Git ignore tu archivo `.env` con:
+
+  ```bash
+  git check-ignore -v phase3-code-first-rag/.env
+  ```
+
+- En la Fase 1, el rol de Lambda utiliza el permiso `bedrock:Retrieve` sobre la Knowledge Base en lugar de conceder acceso completo a Bedrock.
+- Los recursos de AWS pueden generar costos. Elimínalos cuando ya no los necesites.
+
+Durante la charla se mostró brevemente cómo se configura `.env` y la clave que se utilizó fue eliminada posteriormente en Google AI Studio. Este repositorio no incluye esa clave. Si alguna vez muestras una clave por accidente, revócala; no basta con borrarla del código o de una captura.
+
+## Estructura del repositorio
 
 ```text
-autospec-voice-assistant-rag/
+.
 ├── README.md
 ├── .gitignore
 ├── docs/
-│   └── screenshots/
+│   └── images/
+│       ├── banner-codeon2026.png
+│       ├── rag-diagrama.png
+│       ├── cierre-codeon2026.png
 │       ├── phase1/
 │       ├── phase2/
-│       ├── phase3/
-│       └── phase4/
+│       └── phase3/
 ├── phase1-direct-retrieval/
-│   ├── lambda_function.py
-│   ├── test_event.json
 │   └── README.md
 ├── phase2-component-based-rag/
-│   ├── populate_autospec.py
-│   ├── rag_lib.py
-│   ├── rag_app.py
 │   └── README.md
 └── phase3-code-first-rag/
+    ├── README.md
+    ├── data/
     ├── ingest.py
     ├── rag_chain.py
     ├── app.py
-    └── README.md
+    ├── requirements.txt
+    └── .env.example
 ```
 
----
+La estructura muestra los archivos principales del proyecto. Puede haber archivos adicionales en las carpetas de cada fase.
 
-## Fase 1: Direct Retrieval (Bedrock Knowledge Base) - ✅ Completada
+## Próximos pasos
 
-Búsqueda vectorial pura sobre la Knowledge Base gestionada de Bedrock. **Resultado:** `200 OK`, 3 fragmentos recuperados, mejor score `0.59`, costo `$0.00`.
+- Crear un conjunto de preguntas con respuestas esperadas para evaluar la calidad de la recuperación.
+- Ejecutar la implementación de la Fase 3 con LangChain y Amazon Bedrock para aislar mejor el efecto del proveedor.
+- Evaluar más documentos y preguntas antes de establecer criterios de relevancia para los fragmentos recuperados.
+- Medir costos y latencia con un procedimiento reproducible.
 
-Detalle completo en [`phase1-direct-retrieval/`](./phase1-direct-retrieval/README.md).
+## Datos y alcance
 
----
+Las fichas técnicas utilizadas son **ficticias** y se prepararon para las pruebas del proyecto. No deben utilizarse datos reales de clientes ni credenciales.
 
-## Fase 2: Component-Based RAG (Titan Embeddings + ChromaDB + Nova Lite) - ✅ Completada
+## Gracias por CodeOn 2026
 
-Ciclo RAG completo orquestado directamente en código: ChromaDB como vector store, Amazon Titan Embeddings V2, y Amazon Nova Lite generando la respuesta, con guardrail anti-alucinación validado.
-
-Detalle completo en [`phase2-component-based-rag/`](./phase2-component-based-rag/README.md).
-
----
-
-## Fase 3: Code-First RAG (LangChain + ChromaDB + Gemini) - ✅ Completada
-
-El mismo patrón RAG, reconstruido con LangChain para demostrar portabilidad entre proveedores: embeddings y generación con Google Gemini, logging de conversaciones en SQLite.
-
-Detalle completo en [`phase3-code-first-rag/`](./phase3-code-first-rag/README.md).
-
----
-
-## Próximos Pasos
-
-- **Fase 4:** conectar el backend validado a Amazon Connect + Lex para un canal de voz real.
-
----
+Gracias a **Developer Student Clubs UTP** por el espacio para compartir este proyecto y seguir aprendiendo sobre AWS y RAG.

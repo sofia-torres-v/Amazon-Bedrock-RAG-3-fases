@@ -1,57 +1,28 @@
 import os
-import sqlite3
-import datetime
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from dotenv import load_dotenv
+
+# Carga la clave del archivo .env de forma automática
+load_dotenv()
+
 from langchain_chroma import Chroma
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_google_genai import (
+    ChatGoogleGenerativeAI,
+    GoogleGenerativeAIEmbeddings,
+)
 
 PROMPT_TEMPLATE = """Eres un asistente experto en fichas técnicas automotrices.
-A continuación tienes fragmentos que pueden corresponder a diferentes modelos de vehículo:
+A continuación tienes fragmentos, cada uno precedido por el archivo del que proviene:
 
 {context}
 
-Instrucciones: Responde ÚNICAMENTE con información del fragmento que corresponda al
-modelo mencionado en la pregunta. Si hay fragmentos de otros modelos, ignóralos por
-completo. Si la información no aparece en los fragmentos, responde exactamente:
+Instrucciones: Responde ÚNICAMENTE con información de los fragmentos cuyo archivo
+corresponda al modelo mencionado en la pregunta. Ignora por completo los fragmentos
+de otros modelos. Si la información no aparece, responde exactamente:
 'No tengo esa información en las fichas técnicas disponibles.' No inventes datos.
 
 Pregunta: {question}"""
-
-
-def init_db(db_path="./conversation_logs.db"):
-    conn = sqlite3.connect(db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS conversation_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp TEXT,
-            question TEXT,
-            answer TEXT,
-            retrieved_chunks TEXT
-        )
-    """)
-    conn.commit()
-    return conn
-
-
-def log_interaction(question, answer, retrieved_chunks):
-    conn = init_db()
-    conn.execute(
-        "INSERT INTO conversation_logs (timestamp, question, answer, retrieved_chunks) VALUES (?, ?, ?, ?)",
-        (
-            datetime.datetime.now().isoformat(),
-            question,
-            answer,
-            "\n---\n".join(retrieved_chunks),
-        ),
-    )
-    conn.commit()
-    conn.close()
-
-
-def format_docs(docs):
-    return "\n\n".join(doc.page_content for doc in docs)
 
 
 def get_rag_response(question):
@@ -65,28 +36,12 @@ def get_rag_response(question):
         collection_name="autospec_collection_v3",
         embedding_function=embeddings,
     )
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    resultados = vectorstore.similarity_search_with_score(question, k=8)
+    contexto = "\n\n".join(doc.page_content for doc, _ in resultados)
 
-    # Recuperamos los documentos por separado (no solo dentro de la cadena)
-    # para poder guardarlos en el log junto con la respuesta.
-    retrieved_docs = retriever.invoke(question)
-    retrieved_texts = [doc.page_content for doc in retrieved_docs]
-
-    prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
     llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash", google_api_key=api_key)
 
-    chain = (
-        {
-            "context": lambda x: format_docs(retrieved_docs),
-            "question": RunnablePassthrough(),
-        }
-        | prompt
-        | llm
-        | StrOutputParser()
-    )
+    chain = ChatPromptTemplate.from_template(PROMPT_TEMPLATE) | llm | StrOutputParser()
+    answer = chain.invoke({"context": contexto, "question": question})
 
-    answer = chain.invoke(question)
-
-    log_interaction(question, answer, retrieved_texts)
-
-    return answer
+    return answer, resultados

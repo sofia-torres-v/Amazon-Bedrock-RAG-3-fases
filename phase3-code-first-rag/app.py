@@ -9,5 +9,9 @@ go_button = st.button("Go", type="primary")
 
 if go_button:
     with st.spinner("Working..."):
-        respuesta = get_rag_response(input_text)
+        respuesta, resultados = get_rag_response(input_text)
         st.write(respuesta)
+        with st.expander("Fragmentos recuperados"):
+            for doc, distancia in resultados:
+                st.caption(f"distancia = {distancia:.3f}")
+                st.text(doc.page_content)
