@@ -1,268 +1,238 @@
 # Fase 3: RAG fuera de AWS (LangChain + ChromaDB + Gemini)
 
-⬅️ [Volver al README principal](../README.md) · [Volver a la Fase 2: RAG por componentes](../phase2-component-based-rag/README.md)
+⬅️ [Volver al README principal](../README.md) · ⬅️ [Fase 2: RAG por componentes](../phase2-component-based-rag/README.md)
 
-**Estado:** ✅ Completada
+**Estado:** ✅ Implementación local ejecutada y pruebas funcionales realizadas. Portabilidad completa a AWS no probada (ver sección 7).
 
-En esta fase implementé el patrón RAG fuera de AWS, utilizando **LangChain** para la orquestación, **ChromaDB** como base vectorial y **Google Gemini** para generar embeddings y respuestas. La aplicación se ejecuta localmente mediante Streamlit.
+En esta fase implementé el patrón RAG fuera de AWS, con LangChain para la orquestación, ChromaDB como base vectorial y Google Gemini para generar embeddings y respuestas. La aplicación se ejecuta localmente con Streamlit.
 
-En comparación con la Fase 2, cambiaron dos elementos al mismo tiempo: el proveedor de modelos y el framework de orquestación. Por eso, los resultados permiten observar diferencias entre ambas implementaciones, pero no aislar el efecto de cambiar únicamente de proveedor.
+En comparación con la Fase 2, cambiaron **dos elementos al mismo tiempo**: el proveedor de modelos y el framework de orquestación. Por eso los resultados permiten observar diferencias entre ambas implementaciones, pero no aislar el efecto de cambiar únicamente de proveedor.
 
 ## 1. Contexto y arquitectura
 
-Al desarrollar esta fase no tenía acceso a AWS. Esto me permitió comprobar que el patrón RAG también puede implementarse fuera de ese ecosistema con herramientas alternativas.
+Al desarrollar esta fase no tenía acceso a AWS. Eso me permitió comprobar que el patrón RAG funciona fuera de ese ecosistema, con herramientas alternativas.
 
-### Componentes utilizados
+| Componente                     | Implementación                                 |
+| ------------------------------ | ---------------------------------------------- |
+| División de documentos         | `RecursiveCharacterTextSplitter` de LangChain  |
+| Tamaño de fragmento / traslape | 500 caracteres / 100 caracteres                |
+| Embeddings                     | `gemini-embedding-001`                         |
+| Base vectorial                 | ChromaDB local (`./chroma_langchain`)          |
+| Generación de respuestas       | `gemini-3.6-flash`                             |
+| Orquestación                   | Cadena de LangChain: `prompt \| llm \| parser` |
+| Interfaz                       | Streamlit                                      |
 
-| Componente | Implementación |
-|---|---|
-| División de documentos | `RecursiveCharacterTextSplitter` de LangChain |
-| Tamaño de fragmento | 500 caracteres |
-| Traslape | 100 caracteres |
-| Embeddings | `gemini-embedding-001` |
-| Base vectorial | ChromaDB local (`./chroma_langchain`) |
-| Generación de respuestas | `gemini-3.6-flash` |
-| Orquestación | Cadena de LangChain: `prompt \| llm \| parser` |
-| Interfaz | Streamlit, con visualización de fragmentos recuperados y distancias |
+Los nombres y la disponibilidad de los modelos pueden cambiar: verifica que sigan disponibles antes de ejecutar.
 
-Los nombres y la disponibilidad de los modelos pueden cambiar. Antes de ejecutar el proyecto, conviene verificar que los modelos configurados sigan disponibles para la cuenta y la API utilizadas.
+### Flujo
 
-### Flujo de la aplicación
-
-1. Se leen las fichas técnicas desde la carpeta `data/`.
-2. LangChain divide los documentos en fragmentos.
+1. Se leen las fichas técnicas desde `data/`.
+2. LangChain divide los documentos en fragmentos y se antepone a cada uno el archivo de origen (igual que en la Fase 2).
 3. Gemini genera los embeddings de los fragmentos.
-4. ChromaDB almacena los vectores y el contenido asociado.
-5. Cuando el usuario realiza una consulta, se genera su embedding y se buscan fragmentos cercanos.
+4. ChromaDB guarda los vectores y el texto asociado.
+5. Al consultar, se vectoriza la pregunta y se buscan los fragmentos más cercanos.
 6. Los fragmentos recuperados se incorporan al prompt que recibe el modelo generativo.
-7. Streamlit muestra la respuesta y los resultados de la búsqueda para facilitar su inspección.
+7. Streamlit muestra la respuesta y los fragmentos recuperados.
 
-## 2. Archivos del proyecto
+## 2. Archivos
 
-- `ingest.py`: procesa los documentos, los divide con LangChain, genera embeddings con Gemini y almacena los fragmentos en ChromaDB. Anteponer el nombre del archivo a cada fragmento permite identificar su origen, igual que en la Fase 2.
-- `rag_chain.py`: recibe las consultas, recupera los fragmentos relevantes, construye el prompt y solicita una respuesta a Gemini. Devuelve la respuesta junto con los fragmentos recuperados y sus distancias.
-- `app.py`: implementa la interfaz web con Streamlit.
-- `data/`: contiene las tres fichas técnicas utilizadas en las pruebas.
-- `.env.example`: plantilla para configurar la variable de entorno de la API.
-- `requirements.txt`: declara las dependencias del proyecto.
-
-El registro de conversaciones en SQLite, contemplado en el diseño original, se eliminó para centrar esta fase en el cambio de proveedor y framework.
+- `ingest.py`: ingesta (divide, genera embeddings con Gemini y guarda en ChromaDB).
+- `rag_chain.py`: consulta (recupera fragmentos, construye el prompt y llama a Gemini). Devuelve la respuesta y los fragmentos con su distancia (en Chroma, **menor es más cercano**).
+- `app.py`: interfaz con Streamlit.
+- `data/`: las tres fichas técnicas (ficticias).
+- `requirements.txt`: dependencias y plantilla de configuración.
 
 ## 3. Configuración de la API de Gemini
 
-La clave de API se puede gestionar desde [Google AI Studio](https://aistudio.google.com/).
+La clave se crea en [Google AI Studio](https://aistudio.google.com/app/apikey). **Cada persona debe usar su propia clave.** Nunca se escribe en el código ni se sube al repositorio. El proyecto lee la variable `GEMINI_API_KEY` con `python-dotenv` desde un archivo `.env` local.
 
-**La clave nunca debe escribirse directamente en el código ni subirse al repositorio.**
+### Paso 1. Crear el archivo `.env`
 
-El proyecto utiliza la variable de entorno `GEMINI_API_KEY` y `python-dotenv` para cargarla desde un archivo `.env`.
+Desde la carpeta `phase3-code-first-rag`:
 
-### Paso 1. Crear el archivo de configuración
+| Terminal   | Comando                       |
+| ---------- | ----------------------------- |
+| Git Bash   | `cp .env.example .env`        |
+| PowerShell | `Copy-Item .env.example .env` |
 
-Desde la carpeta del proyecto, ejecutar:
+Abre `.env` y reemplaza el texto de ejemplo por tu clave (una sola línea, sin espacios alrededor del `=`):
 
-```bash
-cp .env.example .env
-```
-
-Después, abrir `.env` y configurar la clave:
-
-```env
+```dotenv
 GEMINI_API_KEY=tu-clave
 ```
 
-### Paso 2. Comprobar que Git ignore el archivo
-
-Ejecutar:
+### Paso 2. Comprobar que Git ignora el archivo
 
 ```bash
 git check-ignore -v .env
 ```
 
-El comando debe mostrar la regla de `.gitignore` que hace que Git ignore el archivo. Si no muestra ninguna regla, revisar la configuración antes de continuar.
+Debe mostrar la regla de `.gitignore` que lo excluye. Si no muestra nada, **no continúes**: revisa el `.gitignore` antes de hacer commit.
 
-### Consideraciones de seguridad
+### Seguridad
 
-- El archivo `.env` debe estar incluido en `.gitignore`.
-- `load_dotenv()` no sobrescribe por defecto una variable que ya exista en el entorno. Si `GEMINI_API_KEY` ya está definida en la terminal, esa variable tiene prioridad sobre el valor del archivo `.env`.
-- No imprimir ni compartir la clave, especialmente durante grabaciones o sesiones de pantalla compartida.
-- Si la clave se expone accidentalmente, revocarla en AI Studio y generar otra.
-- Las cuotas y los límites disponibles dependen de las condiciones de la cuenta. Conviene verificarlos en Google AI Studio.
+- **No muestres tu clave en pantalla** (compartir pantalla, capturas, videos). En la charla en vivo mostré brevemente cómo queda el archivo `.env` para explicar cómo se carga, y **eliminé la clave en Google AI Studio en cuanto terminé**. Por eso el repositorio no incluye ninguna clave. Si la tuya se expone, revócala y crea otra.
+- `load_dotenv()` **no sobrescribe** una variable que ya exista en el entorno: si `GEMINI_API_KEY` ya está definida en tu terminal, esa tiene prioridad sobre el `.env`.
+- No imprimas la clave (`echo`, `print`) ni abras el `.env` frente a otras personas.
+- Las cuotas dependen de tu cuenta y del modelo: revísalas en Google AI Studio.
 
 ## 4. Cómo ejecutar el proyecto
 
-### Paso 1. Instalar las dependencias
+Requisitos: Python 3.10 o superior (probado con 3.13) y tu clave de Gemini. Todos los comandos se ejecutan desde `phase3-code-first-rag`.
 
-Desde la carpeta del proyecto, ejecutar:
+### Paso 1. Dependencias
+
+Recomendado: un entorno virtual (no lo usé en mi ejecución).
+
+| Terminal   | Crear                  | Activar                         |
+| ---------- | ---------------------- | ------------------------------- |
+| Git Bash   | `python -m venv .venv` | `source .venv/Scripts/activate` |
+| PowerShell | `python -m venv .venv` | `.venv\Scripts\Activate.ps1`    |
+
+Si PowerShell bloquea la activación por la política de ejecución de scripts, usa Git Bash. Con el entorno activo:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Las dependencias utilizadas son:
-
-```text
-langchain-chroma
-langchain-core
-langchain-google-genai
-langchain-text-splitters
-python-dotenv
-streamlit
-```
-
-Estas dependencias se identificaron a partir de los imports del código. Para reproducir exactamente el entorno de desarrollo, conviene fijar las versiones utilizadas.
+Dependencias: `langchain-chroma`, `langchain-core`, `langchain-google-genai`, `langchain-text-splitters`, `python-dotenv` y `streamlit`. Se identificaron a partir de los `import` del código; para reproducir exactamente un entorno, fija las versiones con `pip freeze`.
 
 ### Paso 2. Preparar la base vectorial
 
-Para reconstruir la base desde cero, se puede eliminar la carpeta local de ChromaDB:
+Si ya existe una base vectorial y quieres reconstruirla desde cero, primero **detén la app** y borra la carpeta de ChromaDB:
 
-```bash
-rm -rf chroma_langchain
-```
+| Terminal   | Comando                                          |
+| ---------- | ------------------------------------------------ |
+| Git Bash   | `rm -rf chroma_langchain`                        |
+| PowerShell | `Remove-Item -Recurse -Force .\chroma_langchain` |
 
-**Importante:** este comando elimina la base vectorial local. Ejecutarlo únicamente cuando se quiera reconstruirla.
+> **Cuidado:** estos comandos borran la carpeta **para siempre**. Ejecútalos solo dentro de `phase3-code-first-rag` y solo si quieres reconstruirla. La primera vez la carpeta no existe: omite este paso o ignora el aviso.
 
-Después, ejecutar la ingesta:
+Luego ejecuta la ingesta:
 
 ```bash
 python ingest.py
 ```
 
-El proceso divide las fichas técnicas, genera los embeddings con Gemini y almacena los fragmentos en ChromaDB.
+En mi ejecución imprimió:
 
-![Resultado de la ingesta](../docs/images/phase3/ingesta.png)
+```
+Colección lista con 6 fragmentos
+```
 
-En mi ejecución, la ingesta generó **3 fragmentos**, según el resultado mostrado en la terminal. Esta cifra corresponde a esa ejecución y puede variar según el contenido de los documentos y la estrategia de división.
-
-**Importante:** no ejecutar `ingest.py` repetidamente sin controlar el contenido de la colección. Dependiendo de cómo esté implementada la ingesta, podrían duplicarse los fragmentos.
+El número puede variar con el contenido de los documentos y la estrategia de división. **No ejecutes `ingest.py` dos veces sin borrar antes `chroma_langchain`:** podrían duplicarse los fragmentos.
 
 ### Paso 3. Iniciar la aplicación
-
-Una vez preparada la base vectorial, ejecutar:
 
 ```bash
 streamlit run app.py
 ```
 
-Este comando inicia el servidor local de Streamlit. Por defecto, utiliza el puerto `8501` y muestra en la terminal las direcciones disponibles.
-
-![Direcciones de acceso de Streamlit](../docs/images/phase3/local-host.png)
-
-Para abrir la aplicación desde el mismo equipo, acceder a:
-
-[http://localhost:8501](http://localhost:8501)
-
-La dirección de red que muestra Streamlit puede permitir el acceso desde otros dispositivos de la misma red, según la configuración del equipo y del firewall.
-
-Desde la interfaz se pueden enviar preguntas y visualizar las respuestas junto con los fragmentos recuperados y sus distancias.
+Streamlit muestra en la terminal la dirección local, normalmente `http://localhost:8501`.
 
 ## 5. Pruebas realizadas
 
-### Pregunta real: información disponible
+Hice dos pruebas funcionales: una pregunta con respuesta en las fichas y otra sin respuesta.
 
-**Pregunta:** ¿Cuáles son las especificaciones de seguridad del modelo Alpha?
+### 5.1. Pregunta real: información disponible
 
-El RAG respondió con los cinco puntos de seguridad de Alpha. El fragmento más cercano tuvo una distancia de **0.411** y contenía la sección de seguridad completa.
+**¿Cuáles son las especificaciones de seguridad del modelo Alpha?**
 
-![Resultado de la pregunta real](../docs/images/phase3/pregunta-real.jpeg)
+El sistema respondió con los cinco puntos de seguridad de Alpha.
 
-### Pregunta trampa: información no disponible
+**Resultado de la pregunta real:**
 
-**Pregunta:** ¿Cuál es la garantía extendida del modelo Alpha?
+![Respuesta a la pregunta sobre la seguridad del modelo Alpha](../docs/images/phase3/pregunta-real.jpeg)
 
-El sistema respondió con el mensaje fijo definido para este caso. La búsqueda también devolvió fragmentos, pero el mejor resultado tuvo una distancia de **0.603**.
+### 5.2. Pregunta trampa: información no disponible
 
-![Resultado de la pregunta trampa](../docs/images/phase3/pregunta-trampa.jpeg)
+**¿Cuál es la garantía extendida del modelo Alpha?**
 
-### ¿Qué muestran estos resultados?
+El sistema respondió con el mensaje fijo definido en el prompt, en lugar de inventar una garantía:
 
-En estas dos pruebas, la distancia del mejor fragmento fue diferente:
+> No tengo esa información en las fichas técnicas disponibles.
 
-| Prueba | Distancia observada |
-|---|---:|
-| Pregunta sobre seguridad de Alpha | 0.411 |
-| Pregunta sobre garantía extendida | 0.603 |
+**Resultado de la pregunta trampa:**
 
-La diferencia es una observación inicial, no una regla general. Podría investigarse un umbral de distancia para decidir cuándo los resultados son suficientemente relevantes, pero **no se validó un umbral con estas dos pruebas**.
+![Respuesta a la pregunta sobre la garantía extendida](../docs/images/phase3/pregunta-trampa.jpeg)
 
-> **Distancia, no score:** Chroma devuelve una distancia, en la que un valor menor indica mayor cercanía según la métrica utilizada. En la Fase 1, el score de Bedrock representa una similitud en la que un valor mayor indica mayor cercanía. Los valores numéricos no son directamente comparables: hay que considerar la métrica y la configuración de cada sistema.
+### Alcance de las pruebas
+
+Estas pruebas muestran el comportamiento ante dos consultas concretas. **No** son una evaluación sistemática de precisión, relevancia ni fiabilidad. Para evaluar formalmente haría falta un conjunto más amplio de preguntas con resultados esperados y medir de manera consistente la recuperación y la calidad de las respuestas.
 
 ## 6. Comparación de la división de documentos
 
-Uno de los hallazgos más interesantes fue observar cómo la estrategia de división afectó a la lista de seguridad del modelo Alpha.
+Un hallazgo interesante fue cómo la estrategia de división afectó a la lista de seguridad de Alpha:
 
-| Fase | Responsable de la división | Resultado observado |
-|---|---|---|
-| 1 | Bedrock: 300 tokens y 20 % de traslape | La lista quedó dividida en dos fragmentos |
-| 2 | Función propia: 500 caracteres y 100 de traslape | La lista se dividió, incluso a mitad de palabra |
-| 3 | `RecursiveCharacterTextSplitter`: 500 caracteres y 100 de traslape | La lista quedó completa en un solo fragmento |
+| Fase | Quién dividió                                    | Resultado observado                       |
+| ---- | ------------------------------------------------ | ----------------------------------------- |
+| 1    | Bedrock: 300 tokens y 20 % de traslape           | La lista quedó dividida en dos fragmentos |
+| 2    | Función propia: 500 caracteres y 100 de traslape | Se dividió, incluso a mitad de palabra    |
+| 3    | `RecursiveCharacterTextSplitter`: 500 y 100      | Quedó completa en un solo fragmento       |
 
-Aunque en las Fases 2 y 3 se configuraron el mismo tamaño y traslape, el comportamiento fue diferente.
+Con el mismo tamaño y traslape en las Fases 2 y 3, el resultado fue distinto: mi función corta por posiciones de caracteres, mientras que `RecursiveCharacterTextSplitter` intenta priorizar separadores naturales (saltos de línea, espacios) antes de partir el texto. En estas fichas eso conservó la lista completa en un solo fragmento. **No significa que LangChain siempre divida mejor:** depende de la estructura de los documentos. (300 tokens y 500 caracteres son unidades distintas: no los compares como si fueran lo mismo.)
 
-La función propia de la Fase 2 cortaba el texto directamente por posiciones de caracteres. En cambio, `RecursiveCharacterTextSplitter` intenta priorizar separadores naturales antes de recurrir a divisiones más pequeñas.
+## 7. Portabilidad a AWS: lo que probé y lo que no
 
-En estas fichas técnicas, esto permitió conservar la lista de seguridad completa en un único fragmento. No significa que LangChain siempre produzca mejores divisiones: el resultado depende de la estructura y del contenido de los documentos.
+### Lo que sí probé (prueba aparte)
 
-## 7. ¿Qué cambia al cambiar de proveedor?
-
-Probé por separado que LangChain puede utilizar modelos de Amazon Bedrock. Sin embargo, **no ejecuté la Fase 3 completa con Bedrock**.
-
-Las clases utilizadas para instanciar los modelos son:
+En el entorno de laboratorio de AWS (Fase 2) instalé `langchain-aws` y comprobé que LangChain puede crear los modelos de Bedrock: `ChatBedrockConverse` con Nova Lite respondió, y `BedrockEmbeddings` con Titan V2 devolvió un vector de 1024 números. El script está en la Fase 2 (`probar_langchain_aws.py`).
 
 ```python
-# Gemini: implementación de esta fase
-GoogleGenerativeAIEmbeddings
-ChatGoogleGenerativeAI
+# Gemini: esta fase
+GoogleGenerativeAIEmbeddings   ·   ChatGoogleGenerativeAI
 
 # Bedrock: probado por separado
-BedrockEmbeddings
-ChatBedrockConverse
+BedrockEmbeddings              ·   ChatBedrockConverse
 ```
 
-Los modelos se instancian en `ingest.py` para generar los embeddings y en `rag_chain.py` para recuperar fragmentos y generar respuestas.
+### Lo que NO probé
 
-Al cambiar el modelo de embeddings, es necesario volver a generar los vectores de los documentos. Las consultas también deben vectorizarse con el modelo correspondiente a esos documentos.
+**No probé la portabilidad completa con AWS**, es decir, correr esta Fase 3 entera con Bedrock. El motivo es práctico: mi cuenta tiene una **cuota diaria de tokens** limitada para los modelos de generación, que ya me bloqueó antes (`ThrottlingException`: _Too many tokens per day_), y lo más probable es que me hubiera vuelto a atascar. El entorno de laboratorio es temporal. No hay un fallo conocido en el código ni en LangChain: simplemente no se ejecutó.
 
-Por ejemplo, en la Fase 2 se utilizó Titan, que produjo vectores de 1024 dimensiones. En esta fase no medí la dimensionalidad de los embeddings generados por Gemini.
+### Lo que es probable (expectativa, no resultado)
 
-| Qué se mantiene | Qué puede cambiar |
-|---|---|
-| Las fichas técnicas | El proveedor de embeddings |
-| Los parámetros de división: 500 caracteres y 100 de traslape | El modelo de generación |
-| ChromaDB como base vectorial | Las clases utilizadas para instanciar los modelos |
-| El prompt y el flujo general | Los vectores almacenados, que deben regenerarse al cambiar el modelo de embeddings |
+Por el diseño de LangChain, que ofrece una interfaz común para modelos de distintos proveedores, lo más probable es que bastaría con cambiar **solo ciertas cosas**:
 
-Para comparar proveedores de forma más controlada, convendría mantener el mismo framework, los mismos documentos, los mismos parámetros de división y un protocolo de evaluación común.
+| Qué cambiar                      | Dónde / por qué                                                                                                                       |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Las clases que crean los modelos | `ingest.py` (embeddings) y `rag_chain.py` (embeddings de la pregunta y modelo de chat)                                                |
+| Credenciales y permisos de AWS   | Para poder invocar los modelos                                                                                                        |
+| Volver a ingestar                | Los vectores de un modelo de embeddings no sirven para otro; la pregunta debe vectorizarse con el **mismo** modelo que los documentos |
+
+Es una expectativa basada en cómo está pensado el framework. **Queda pendiente validarla** ejecutando el flujo completo con Bedrock y las mismas preguntas, cuando haya acceso y cuota para el modelo.
+
+Un dato de la prueba aparte: Titan produjo vectores de 1024 números. No medí el tamaño de los de Gemini.
+
+| Se mantiene en el diseño       | Puede cambiar                                 |
+| ------------------------------ | --------------------------------------------- |
+| Las fichas técnicas            | El proveedor de embeddings                    |
+| El tamaño del corte: 500 y 100 | El modelo de generación                       |
+| ChromaDB como base vectorial   | Las clases que crean los modelos              |
+| El prompt y el flujo general   | Los vectores guardados (hay que regenerarlos) |
 
 ## 8. Comparación con la Fase 2
 
-| Característica | Fase 2 | Fase 3 |
-|---|---|---|
-| Proveedor de modelos | Titan y Nova Lite (AWS) | Gemini |
-| Acceso a los modelos | `boto3` directamente | Integraciones de LangChain |
-| División de documentos | Función propia | `RecursiveCharacterTextSplitter` |
-| Base vectorial | ChromaDB | ChromaDB |
-| Prompt | Mismo texto de instrucciones | Mismo texto de instrucciones |
+| Característica         | Fase 2                        | Fase 3                            |
+| ---------------------- | ----------------------------- | --------------------------------- |
+| Proveedor de modelos   | Titan y Nova Lite (AWS)       | Gemini                            |
+| Acceso a los modelos   | SDK de AWS (`boto3`)          | Integraciones de LangChain        |
+| División de documentos | Función propia                | `RecursiveCharacterTextSplitter`  |
+| Base vectorial         | ChromaDB (`chromadb` directo) | ChromaDB (vía `langchain-chroma`) |
+| Prompt                 | Mismo texto de instrucciones  | Mismo texto de instrucciones      |
 
-La Fase 2 ayudó a entender los componentes del RAG de forma explícita, mientras que la Fase 3 permitió utilizar LangChain para integrar la división de documentos y el flujo de recuperación y generación.
+Como cambiaron el proveedor **y** el framework, las diferencias no pueden atribuirse solo a Gemini ni solo a LangChain. Para una comparación más controlada, habría que usar el mismo framework, los mismos documentos y parámetros, y un protocolo de evaluación común.
 
-Como en la Fase 3 cambiaron tanto el proveedor como el framework, las diferencias observadas no pueden atribuirse exclusivamente a Gemini o a LangChain.
+## 9. Limitaciones y trabajo pendiente
 
-## 9. Limitaciones y siguientes pasos
-
-- Se utilizaron únicamente tres documentos, por lo que los resultados no permiten generalizar el comportamiento a colecciones grandes.
-- Cambiaron el proveedor de modelos y el framework al mismo tiempo; no es una comparación aislada de proveedores.
-- La colección contiene seis fragmentos. Con `k=8`, la búsqueda devuelve toda la colección porque hay menos de ocho fragmentos disponibles. La información que finalmente llega al modelo depende de la lógica de construcción del contexto implementada en la aplicación.
-- No medí costos, latencia ni calidad de respuestas mediante una evaluación sistemática.
-- No se validó un umbral de distancia con un conjunto amplio de preguntas.
-- Las cuotas y los límites de Gemini dependen del plan y de las condiciones vigentes de la cuenta.
-- No ejecuté el flujo completo con LangChain y Bedrock.
-
-Los siguientes pasos serían ejecutar la misma arquitectura con LangChain y Bedrock, definir un conjunto común de preguntas y comparar recuperación, calidad de respuestas, latencia y costo. También convendría probar el comportamiento con más documentos y evaluar un criterio de relevancia con suficientes ejemplos.
+- **Comparación no aislada:** cambian el proveedor y el framework a la vez.
+- **Colección pequeña:** con pocos fragmentos y `k=8`, la búsqueda devuelve **toda** la colección; el filtro por modelo lo hace el prompt, no la búsqueda.
+- **Sin evaluación sistemática:** no medí costo, latencia ni calidad de las respuestas.
+- **Portabilidad a AWS sin validar** de extremo a extremo (sección 7).
+- **Reproducibilidad:** las versiones de las dependencias y la disponibilidad de los modelos pueden cambiar.
 
 ## Conclusión
 
-Esta fase demuestra que el patrón RAG puede implementarse fuera de AWS con LangChain, ChromaDB y Gemini. También permite observar cómo la estrategia de división influye en los fragmentos recuperados y cómo una interfaz local facilita inspeccionar las respuestas y sus fuentes.
+Esta fase muestra que el patrón RAG puede implementarse fuera de AWS con LangChain, ChromaDB y Gemini, que la estrategia de división influye en los fragmentos recuperados, y que la aplicación se comporta como se esperaba ante una pregunta con respuesta y otra sin respuesta en los documentos.
 
-El principal aprendizaje no es que un proveedor o framework sea necesariamente mejor, sino que **la división de documentos, la recuperación y la construcción del contexto influyen en el resultado final**.
-
-El siguiente paso para una comparación más controlada sería ejecutar el mismo flujo con LangChain y Amazon Bedrock, manteniendo constantes los demás componentes y evaluando los resultados con las mismas preguntas.
+➡️ [Volver al README principal](../README.md)
