@@ -1,4 +1,4 @@
-# Fase 1: Amazon Bedrock Knowledge Bases - recuperación administrada
+# Fase 1: Amazon Bedrock Knowledge Bases - recuperación gestionada
 
 ⬅️ [Volver al README principal](../README.md) · ➡️ [Continuar con la Fase 2: RAG por componentes](../phase2-component-based-rag/README.md)
 
@@ -6,7 +6,7 @@
 
 ## 1. Objetivo y alcance
 
-En esta fase construí una prueba de recuperación de información utilizando una **Knowledge Base administrada de Amazon Bedrock**, sin incorporar un modelo generativo al flujo de consulta que validé.
+En esta fase construí una prueba de recuperación de información utilizando una **Knowledge Base gestionada de Amazon Bedrock**, sin incorporar un modelo generativo al flujo de consulta que validé.
 
 El objetivo fue entender qué resuelve Bedrock por mí, desde la ingesta de documentos hasta la búsqueda de fragmentos relevantes, y comprobar cómo puedo acceder a esos resultados mediante código.
 
@@ -14,7 +14,7 @@ La arquitectura de esta fase sigue este flujo:
 
 **Ingesta de documentos**
 
-S3 → procesamiento y fragmentación → embeddings → almacenamiento vectorial administrado
+S3 → procesamiento y fragmentación → embeddings → almacenamiento vectorial gestionado
 
 **Consulta**
 
@@ -48,21 +48,21 @@ Creé la Knowledge Base mediante la opción de **creación rápida** de la conso
 | Nombre de la Knowledge Base y bucket | Elegidos por mí |
 | Parser | Managed parser; los metadatos mostraron `PLAIN_TEXT` |
 | Chunking | Valores predeterminados observados: 300 tokens como máximo y 20 % de traslape |
-| Modelo de embeddings | Opción administrada; la consola no mostró qué modelo concreto utilizó |
+| Modelo de embeddings | Opción gestionada; la consola no mostró qué modelo concreto utilizó |
 | Almacenamiento vectorial | `Managed vector store` |
 | Sincronización | Bajo demanda; en mi caso, la creación inició la primera sincronización |
 
-La consola también me permitió seleccionar un modelo de embeddings explícito. En mi pantalla apareció Titan Text Embeddings V2, con un posible costo adicional indicado por la propia consola. Para esta prueba mantuve la opción administrada.
+La consola también me permitió seleccionar un modelo de embeddings explícito. En mi pantalla apareció Titan Text Embeddings V2, con un posible costo adicional indicado por la propia consola. Para esta prueba mantuve la opción gestionada.
 
 ### Capturas de la configuración
 
 ![Opciones de embeddings durante la creación de la Knowledge Base](../docs/images/phase1/crear-kb-embeddings.png)
 
-*La consola permite elegir entre la opción administrada y un modelo de embeddings explícito.*
+*La consola permite elegir entre la opción gestionada y un modelo de embeddings explícito.*
 
 ![Resumen de la Knowledge Base](../docs/images/phase1/kb-overview.png)
 
-*La Knowledge Base aparece con almacenamiento vectorial administrado y estado `Available`.*
+*La Knowledge Base aparece con almacenamiento vectorial gestionado y estado `Available`.*
 
 ![Configuración predeterminada de chunking](../docs/images/phase1/chunking-default.png)
 
@@ -263,7 +263,7 @@ Intenté probar la generación con el modo `agentic` y Nova Lite, pero la genera
 
 En esa prueba, la recuperación había funcionado, pero no pude completar la generación por el límite de tokens diarios de mi cuenta.
 
-La consola también indicó que `Standard retrieval with answer generation` no estaba soportado para esta Knowledge Base administrada y que debía utilizar la opción `agentic`.
+La consola también indicó que `Standard retrieval with answer generation` no estaba soportado para esta Knowledge Base gestionada y que debía utilizar la opción `agentic`.
 
 Por tanto, esta fase **no demuestra que la generación funcione de extremo a extremo**. Solo valida la recuperación de fragmentos mediante la consola y la llamada programática a `Retrieve`.
 

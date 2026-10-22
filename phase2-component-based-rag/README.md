@@ -1,14 +1,14 @@
 # Fase 2: RAG por componentes (Titan + ChromaDB + Nova Lite)
 
-[Volver al README principal](../README.md) · ➡️ [Continuar con la Fase 3: RAG desde código](../phase3-code-first-rag/README.md)
+⬅️ [Volver al README principal](../README.md) · ➡️ [Continuar con la Fase 3: RAG fuera de AWS](../phase3-code-first-rag/README.md)
 
-**Estado:** ✅ Demo funcional ·  Calidad, costo y latencia no evaluados formalmente
+**Estado:** ✅ Demo funcional · Calidad, costo y latencia no evaluados formalmente
 
 ## 1. Objetivo y contexto
 
-En la Fase 1 utilicé una Knowledge Base administrada de Amazon Bedrock para comprobar cómo funciona la recuperación de información sin implementar manualmente toda la infraestructura.
+En la Fase 1 utilicé una Knowledge Base gestionada de Amazon Bedrock para comprobar cómo funciona la recuperación de información sin implementar manualmente toda la infraestructura.
 
-En esta segunda fase construí el flujo RAG utilizando componentes explícitos: **lo que antes estaba detrás de una solución administrada, ahora lo dividí en pasos que podía observar y controlar**.
+En esta segunda fase construí el flujo RAG utilizando componentes explícitos: **lo que antes estaba detrás de una solución gestionada, ahora lo dividí en pasos que podía observar y controlar**.
 
 La implementación utiliza Python para fragmentar los documentos, Titan Text Embeddings V2 para generar embeddings, ChromaDB para almacenar y recuperar vectores, y Amazon Nova Lite para generar respuestas mediante la API Converse.
 
@@ -45,11 +45,12 @@ A diferencia de la Fase 1, aquí puedo inspeccionar directamente cómo se cortan
 - `populate_autospec.py`: ingesta de documentos, fragmentación, generación de embeddings y almacenamiento en ChromaDB.
 - `rag_lib.py`: lógica de consulta, recuperación de fragmentos, construcción del prompt y llamada a Nova Lite.
 - `rag_app.py`: interfaz de Streamlit para probar el RAG.
+- `probar_langchain_aws.py`: prueba independiente de `langchain-aws` con los modelos de Bedrock (sección 7).
 - `requirements.txt`: dependencias de Python utilizadas en el proyecto.
 
 ### 3.1. Mi propia función de fragmentación
 
-En lugar de utilizar el chunking administrado de Bedrock, implementé una función sencilla en Python:
+En lugar de utilizar el chunking gestionado de Bedrock, implementé una función sencilla en Python:
 
 ```python
 def dividir(texto, tamano=500, solape=100):
@@ -152,8 +153,7 @@ Como esa información no estaba disponible en las fichas técnicas, la respuesta
 
 Debajo de la respuesta, el panel `See search results` muestra los fragmentos recuperados que se proporcionan al modelo.
 
-
-### ¿Qué implica utilizar `n_results=8`?
+### 6.3. ¿Qué implica utilizar `n_results=8`?
 
 En mi ejecución había ocho fragmentos en la colección. Por tanto, solicitar ocho resultados permitía recuperar toda la colección, siempre que la consulta devolviera los ocho elementos.
 
@@ -165,7 +165,7 @@ Para una colección mayor, investigaría cómo restringir la recuperación por m
 
 La lección principal es que **la calidad de la respuesta depende también de la calidad de la recuperación**. Un modelo generativo no puede recuperar información que no está presente en el contexto que recibe.
 
-## 8. Prueba adicional: LangChain con Amazon Bedrock
+## 7. Prueba adicional: LangChain con Amazon Bedrock
 
 Como experimento independiente, comprobé que `langchain-aws` podía invocar los modelos de Bedrock utilizados en esta fase.
 
@@ -177,7 +177,7 @@ Instalé la dependencia:
 pip install langchain-aws
 ```
 
-Después ejecuté:
+Después ejecuté (el script está en `probar_langchain_aws.py`):
 
 ```python
 from langchain_aws import ChatBedrockConverse, BedrockEmbeddings
@@ -204,7 +204,7 @@ print(len(v), v[:5])
 
 Este experimento confirmó que podía utilizar una abstracción de LangChain para acceder a ambos modelos, aunque la implementación principal de la fase utiliza directamente `boto3`.
 
-## 9. Limitaciones
+## 8. Limitaciones
 
 - No medí costo, latencia ni calidad de recuperación y generación de manera sistemática.
 - No aislé el efecto del prefijo de los fragmentos y del aumento de `n_results`.
@@ -216,10 +216,10 @@ Este experimento confirmó que podía utilizar una abstracción de LangChain par
 
 En esta fase construí un RAG con componentes explícitos: implementé la fragmentación en Python, generé embeddings con Titan, almacené los vectores en ChromaDB y utilicé Nova Lite para generar respuestas.
 
-La experiencia me permitió observar responsabilidades que en la Fase 1 estaban detrás de una solución administrada y comprender mejor la relación entre recuperación y generación.
+La experiencia me permitió observar responsabilidades que en la Fase 1 estaban detrás de una solución gestionada y comprender mejor la relación entre recuperación y generación.
 
 También comprobé que conseguir una respuesta correcta no basta para evaluar un RAG: es necesario inspeccionar los fragmentos recuperados y probar qué sucede cuando la información no está disponible.
 
 El siguiente paso es profundizar en la implementación desde código y comprender qué otras partes del proceso puedo construir y controlar directamente.
 
-➡️ [Continuar con la Fase 3: RAG desde código](../phase3-code-first-rag/README.md)
+➡️ [Continuar con la Fase 3: RAG fuera de AWS](../phase3-code-first-rag/README.md)
