@@ -42,13 +42,13 @@ La diferencia entre las tres implementaciones está en quién se encarga de esta
 
 > Estas fases ilustran diferentes formas de construir un RAG; no son una comparación controlada de rendimiento. En la Fase 3 cambiaron tanto el proveedor de modelos como el framework de orquestación.
 
-
 ### Explora cada fase
 
 - **[Fase 1: Bedrock gestionado](phase1-direct-retrieval/README.md)** — Solo la recuperación, sin generación
 - **[Fase 2: Piezas propias con AWS](phase2-component-based-rag/README.md)** — Corte y prompt propios, modelos de AWS
 - **[Fase 3: Fuera de AWS](phase3-code-first-rag/README.md)** — El mismo patrón con otro proveedor
 
+---
 
 ## El caso de uso
 
@@ -56,7 +56,6 @@ Un asistente que responde preguntas sobre fichas técnicas ficticias de tres veh
 
 - **Real:** *¿Cuáles son las especificaciones de seguridad del modelo Alpha?*
 - **Trampa:** *¿Cuál es la garantía extendida del modelo Alpha?* — esa información no existe en los documentos.
-
 
 ---
 
@@ -77,7 +76,7 @@ Un asistente que responde preguntas sobre fichas técnicas ficticias de tres veh
 | **2** (componentes en AWS) | Credenciales de AWS, acceso a Titan V2 y Nova Lite en us-east-1 |
 | **1** (Bedrock gestionado) | Cuenta de AWS, bucket S3, Knowledge Base y Lambda |
 
-> Si solo quieres explorar el flujo con una ejecución local, empieza por la Fase 3. Si quieres entender qué componentes gestiona Bedrock, empieza por la Fase 1.
+> Para explorar el flujo con una ejecución local, empieza por la Fase 3. Si quieres entender qué gestiona Bedrock, ir a Fase 1.
 
 ---
 
