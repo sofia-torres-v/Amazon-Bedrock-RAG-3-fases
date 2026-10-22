@@ -120,21 +120,7 @@ Los pasos para construir la base vectorial, ejecutar la ingesta y arrancar Strea
 
 ## Seguridad
 
-- Nunca subas claves de API ni credenciales de AWS al repositorio.
-- La clave de Gemini se carga desde `phase3-code-first-rag/.env`, que debe estar excluido mediante `.gitignore`.
-- No muestres claves durante grabaciones, capturas o sesiones de pantalla compartida.
-- Si una clave se expone, revócala y genera otra. No reutilices una clave expuesta.
-- Antes de publicar capturas, oculta el número de cuenta de AWS (Account ID) y cualquier otra información sensible.
-- Comprueba que Git ignore tu archivo `.env` con:
-
-```bash
-git check-ignore -v phase3-code-first-rag/.env
-```
-
-- En la Fase 1, el rol de Lambda utiliza el permiso `bedrock:Retrieve` sobre la Knowledge Base en lugar de conceder acceso completo a Bedrock.
-- Los recursos de AWS pueden generar costos. Elimínalos cuando ya no los necesites.
-
-Durante la charla se mostró brevemente cómo se configura `.env` y la clave que se utilizó fue eliminada posteriormente en Google AI Studio. Este repositorio no incluye esa clave. Si alguna vez muestras una clave por accidente, revócala; no basta con borrarla del código o de una captura.
+Nunca publiques claves API ni credenciales de AWS en el repositorio. Mantén la clave de Gemini en .env, excluida mediante .gitignore. Oculta las claves y el Account ID en grabaciones y capturas. Si una clave se expone, revócala y genera una nueva. Verifica que Git ignore el archivo .env.
 
 ## Estructura del repositorio
 
@@ -164,12 +150,6 @@ Durante la charla se mostró brevemente cómo se configura `.env` y la clave que
 ```
 
 La estructura muestra los archivos principales del proyecto. Puede haber archivos adicionales en las carpetas de cada fase.
-
-## Próximos pasos
-
-- Repetir el flujo con LangChain y Amazon Bedrock (Titan + Nova Lite) para aislar el efecto del proveedor.
-- Evaluar más documentos y preguntas antes de establecer criterios de relevancia para los fragmentos recuperados.
-- Medir costos y latencia con un procedimiento reproducible.
 
 ## Datos y alcance
 
