@@ -52,14 +52,11 @@ La diferencia entre las tres implementaciones está en quién se encarga de esta
 
 ## El caso de uso
 
-El proyecto utiliza un asistente que responde preguntas sobre las fichas técnicas ficticias de tres vehículos: Alpha, Beta y Gamma.
+Un asistente que responde preguntas sobre fichas técnicas ficticias de tres vehículos: Alpha, Beta y Gamma. Se probó con dos preguntas:
 
-Se probaron dos tipos de preguntas:
+- **Real:** *¿Cuáles son las especificaciones de seguridad del modelo Alpha?*
+- **Trampa:** *¿Cuál es la garantía extendida del modelo Alpha?* — esa información no existe en los documentos.
 
-- **Pregunta con respuesta disponible:** *¿Cuáles son las especificaciones de seguridad del modelo Alpha?*
-- **Pregunta trampa:** *¿Cuál es la garantía extendida del modelo Alpha?* (esa información no aparece en las fichas técnicas)
-
-La segunda pregunta permite observar cómo se comporta el sistema cuando la información solicitada no está disponible en los documentos.
 
 ---
 
@@ -72,11 +69,13 @@ La segunda pregunta permite observar cómo se comporta el sistema cuando la info
 
 ---
 
-## ¿Qué necesitas para reproducir el proyecto?
+## Requisitos
 
-- **Fase 3** (fuera de AWS): Python 3.10+ (probado con 3.13) y una clave de API de Gemini. Verifica las cuotas y condiciones vigentes.
-- **Fase 2** (componentes propios en AWS): Credenciales de AWS y acceso a Titan Text Embeddings V2 y Nova Lite en us-east-1. Los modelos pueden generar costos; consulta los precios vigentes.
-- **Fase 1** (Bedrock gestionado): Cuenta de AWS, bucket de S3, Knowledge Base y Lambda con permisos adecuados. Los recursos pueden generar costos; elimínalos al terminar.
+| Fase | Necesitas |
+|---|---|
+| **3** (fuera de AWS) | Python 3.10+ y clave de API de Gemini |
+| **2** (componentes en AWS) | Credenciales de AWS, acceso a Titan V2 y Nova Lite en us-east-1 |
+| **1** (Bedrock gestionado) | Cuenta de AWS, bucket S3, Knowledge Base y Lambda |
 
 > Si solo quieres explorar el flujo con una ejecución local, empieza por la Fase 3. Si quieres entender qué componentes gestiona Bedrock, empieza por la Fase 1.
 
