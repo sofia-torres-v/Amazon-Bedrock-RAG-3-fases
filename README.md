@@ -1,7 +1,7 @@
 
 # Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS
 
-> Proyecto presentado en la charla «Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS», en CodeOn 2026, organizado por Developer Student Clubs UTP.
+> Proyecto presentado en la charla *«Amazon Bedrock: las ventajas reales de un RAG gestionado en AWS»*, en **CodeOn 2026**, organizado por Developer Student Clubs UTP.
 
 **Idea central:** Bedrock no es magia: ofrece componentes de RAG gestionados que evitan implementar y mantener ciertas piezas por separado. Entender qué hay detrás permite decidir cuándo conviene utilizarlos y cuándo tiene sentido construir una solución propia.
 
@@ -26,8 +26,6 @@ La **R** de RAG corresponde a *Retrieval* (recuperación); la **G**, a *Generati
 
 ## Las tres fases: el mismo patrón RAG, quitando una capa de abstracción
 
-![Las tres fases del RAG: gestionado, piezas propias y fuera de AWS](docs/images/tres-fases.svg)
-
 La diferencia entre las tres implementaciones está en quién se encarga de estas piezas y cuánto control tiene el desarrollador sobre ellas.
 
 | Característica | Fase 1: Bedrock gestionado | Fase 2: componentes propios en AWS | Fase 3: fuera de AWS |
@@ -40,23 +38,17 @@ La diferencia entre las tres implementaciones está en quién se encarga de esta
 | **Generación** | No validada (límite de cuota) | Nova Lite (API Converse) | Gemini (gemini-3.6-flash) |
 | **Orquestación** | Knowledge Bases + Lambda (Retrieve) | Código propio con boto3 | Cadena de LangChain |
 
-### Explora cada fase
-
-| Fase | Qué encontrarás | README |
-|---|---|---|
-| **1. RAG gestionado** | Amazon Bedrock Knowledge Bases, S3 y Lambda. Exploración de la recuperación sin implementar manualmente el chunking, los embeddings ni la base vectorial. | [Ver la Fase 1](phase1-direct-retrieval/README.md) |
-| **2. RAG por componentes en AWS** | Titan Text Embeddings V2, ChromaDB y Amazon Nova Lite. Construcción del flujo de recuperación y generación mediante código propio. | [Ver la Fase 2](phase2-component-based-rag/README.md) |
-| **3. RAG fuera de AWS** | LangChain, ChromaDB y Google Gemini. Implementación local del mismo patrón con otras herramientas. | [Ver la Fase 3](phase3-code-first-rag/README.md) |
-
-### ¿Qué cambia al pasar de una fase a otra?
-
-- **Fase 1:** Bedrock se encarga de la infraestructura de recuperación. La Knowledge Base gestiona la ingesta y la búsqueda vectorial. La Lambda consulta mediante la API Retrieve. No se validó la generación.
-- **Fase 2:** Las piezas quedan más visibles. El código controla la división de documentos, genera embeddings con Titan, almacena los vectores en ChromaDB y utiliza Nova Lite para generar las respuestas.
-- **Fase 3:** El mismo patrón con otras herramientas. LangChain organiza el flujo, ChromaDB almacena los vectores y Gemini genera los embeddings y las respuestas. La aplicación se ejecuta localmente.
+![Las tres fases: componentes y flujo de cada implementación](docs/images/tres-fases.svg)
 
 > Estas fases ilustran diferentes formas de construir un RAG; no son una comparación controlada de rendimiento. En la Fase 3 cambiaron tanto el proveedor de modelos como el framework de orquestación.
 
----
+
+### Explora cada fase
+
+- **[Fase 1: Bedrock gestionado](phase1-direct-retrieval/README.md)** — Solo la recuperación, sin generación
+- **[Fase 2: Piezas propias con AWS](phase2-component-based-rag/README.md)** — Corte y prompt propios, modelos de AWS
+- **[Fase 3: Fuera de AWS](phase3-code-first-rag/README.md)** — El mismo patrón con otro proveedor
+
 
 ## El caso de uso
 
@@ -73,7 +65,7 @@ La segunda pregunta permite observar cómo se comporta el sistema cuando la info
 
 ## Hallazgos y limitaciones
 
-- No medí costos, latencia ni calidad de respuestas mediante una evaluación sistemática. El proyecto no permite concluir qué implementación es más rápida, barata o precisa.
+- No medí costos, latencia ni calidad de respuestas. El objetivo del proyecto es entender la arquitectura, no comparar rendimiento entre implementaciones.
 - La comparación no está controlada: en la Fase 3 cambiaron al mismo tiempo el proveedor de modelos y el framework.
 - Se utilizaron solo tres documentos cortos. Con una colección tan pequeña, la búsqueda puede devolver una gran parte de los fragmentos disponibles.
 - En la Fase 1, la generación con Bedrock no pudo validarse debido a un error `ThrottlingException` asociado a la cuota diaria de tokens de la cuenta utilizada. Esto no demuestra una limitación general de Bedrock.
@@ -152,7 +144,6 @@ Los pasos para construir la base vectorial, ejecutar la ingesta y arrancar Strea
 ├── docs/
 │   └── images/
 │       ├── tres-fases.svg
-│       ├── tres-fases-detalle.svg
 │       ├── rag-diagrama.svg
 │       ├── phase1/
 │       ├── phase2/
